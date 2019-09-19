@@ -8,7 +8,11 @@ const getIsMobile = () => {
   let isMobile = false;
 
   try {
-    isMobile = !!((window.navigator && window.navigator.standalone) || navigator.userAgent.match('CriOS') || navigator.userAgent.match(/mobile/i));
+    isMobile = !!(
+      (window.navigator && window.navigator.standalone) ||
+      navigator.userAgent.match('CriOS') ||
+      navigator.userAgent.match(/mobile/i)
+    );
   } catch (ex) {
     // continue regardless of error
   }
@@ -17,7 +21,6 @@ const getIsMobile = () => {
 };
 
 class FacebookLogin extends React.Component {
-
   static propTypes = {
     isDisabled: PropTypes.bool,
     callback: PropTypes.func.isRequired,
@@ -32,6 +35,7 @@ class FacebookLogin extends React.Component {
     redirectUri: PropTypes.string,
     autoLoad: PropTypes.bool,
     disableMobileRedirect: PropTypes.bool,
+    dontCallMe: PropTypes.bool,
     isMobile: PropTypes.bool,
     fields: PropTypes.string,
     version: PropTypes.string,
@@ -47,6 +51,7 @@ class FacebookLogin extends React.Component {
     returnScopes: false,
     xfbml: false,
     cookie: false,
+    dontCallMe: false,
     authType: '',
     fields: 'name',
     version: '3.1',
@@ -79,7 +84,7 @@ class FacebookLogin extends React.Component {
     }
   }
   componentWillReceiveProps(nextProps) {
-    if (this.state.isSdkLoaded && nextProps.autoLoad && ! this.props.autoLoad) {
+    if (this.state.isSdkLoaded && nextProps.autoLoad && !this.props.autoLoad) {
       window.FB.getLoginStatus(this.checkLoginAfterRefresh);
     }
   }
@@ -112,10 +117,7 @@ class FacebookLogin extends React.Component {
 
   isRedirectedFromFb() {
     const params = window.location.search;
-    return (
-      decodeParamForKey(params, 'code') ||
-      decodeParamForKey(params, 'granted_scopes')
-    );
+    return decodeParamForKey(params, 'code') || decodeParamForKey(params, 'granted_scopes');
   }
 
   sdkLoaded() {
@@ -128,21 +130,28 @@ class FacebookLogin extends React.Component {
       const element = d.getElementsByTagName(s)[0];
       const fjs = element;
       let js = element;
-      if (d.getElementById(id)) { return; }
-      js = d.createElement(s); js.id = id;
+      if (d.getElementById(id)) {
+        return;
+      }
+      js = d.createElement(s);
+      js.id = id;
       js.src = `https://connect.facebook.net/${language}/sdk.js`;
       fjs.parentNode.insertBefore(js, fjs);
     })(document, 'script', 'facebook-jssdk');
   }
 
-  responseApi = (authResponse) => {
-    window.FB.api('/me', { locale: this.props.language, fields: this.props.fields }, (me) => {
-      Object.assign(me, authResponse);
-      this.props.callback(me);
-    });
+  responseApi = authResponse => {
+    if (this.props.dontCallMe) {
+      window.FB.api('/me', { locale: this.props.language, fields: this.props.fields }, me => {
+        Object.assign(me, authResponse);
+        this.props.callback(me);
+      });
+    } else {
+      this.props.callback(authResponse);
+    }
   };
 
-  checkLoginState = (response) => {
+  checkLoginState = response => {
     this.setStateIfMounted({ isProcessing: false });
     if (response.authResponse) {
       this.responseApi(response.authResponse);
@@ -155,7 +164,7 @@ class FacebookLogin extends React.Component {
     }
   };
 
-  checkLoginAfterRefresh = (response) => {
+  checkLoginAfterRefresh = response => {
     if (response.status === 'connected') {
       this.checkLoginState(response);
     } else {
@@ -163,12 +172,22 @@ class FacebookLogin extends React.Component {
     }
   };
 
-  click = (e) => {
+  click = e => {
     if (!this.state.isSdkLoaded || this.state.isProcessing || this.props.isDisabled) {
       return;
     }
     this.setState({ isProcessing: true });
-    const { scope, appId, onClick, returnScopes, responseType, redirectUri, disableMobileRedirect, authType, state } = this.props;
+    const {
+      scope,
+      appId,
+      onClick,
+      returnScopes,
+      responseType,
+      redirectUri,
+      disableMobileRedirect,
+      authType,
+      state,
+    } = this.props;
 
     if (typeof onClick === 'function') {
       onClick(e);
@@ -179,7 +198,6 @@ class FacebookLogin extends React.Component {
     }
 
     const params = {
-
       client_id: appId,
       redirect_uri: redirectUri,
       state,
