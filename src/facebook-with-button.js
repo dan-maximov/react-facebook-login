@@ -1,7 +1,6 @@
 // @flow
 import React from 'react';
 import PropTypes from 'prop-types';
-import styles from '../styles/facebook.scss';
 import FacebookLogin from './facebook';
 
 // https://www.w3.org/TR/html5/disabled-elements.html#disabled-elements
@@ -38,9 +37,6 @@ class ReactFacebookLoginWithButton extends React.Component {
 
   style() {
     const defaultCSS = this.constructor.defaultProps.cssClass;
-    if (this.props.cssClass === defaultCSS) {
-      return <style dangerouslySetInnerHTML={{ __html: styles }}></style>;
-    }
     return false;
   }
 
